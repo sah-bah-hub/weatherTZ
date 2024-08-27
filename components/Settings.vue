@@ -46,6 +46,7 @@
                             class="settings__hamburger"
                             src="../assets/Hamburger.svg"
                             @mousedown="drag($event)"
+                            @touchstart="drag($event)"
                         >
                         {{ element.name }}
                     </div>
@@ -105,22 +106,25 @@ const between = (x: number, min: number, max: number): number => {
     }
     return result;
 };
-const drag = (event: MouseEvent): void => {
+const drag = (event: MouseEvent|TouchEvent): void => {
     event.preventDefault()
-    var dragStartY: number = event.pageY;
-    var moveY: number = 0;
+    
+    const dragStartY: number = event.pageY || event.changedTouches[0]?.pageY;
+    let moveY: number = 0;
 
-    var element:HTMLElement = event.target?.parentElement.parentElement as HTMLElement;
+    const element:HTMLElement = event.target?.parentElement.parentElement as HTMLElement;
 
-    var length: number = cityArray.value.length;
-    var index: number = cityArray.value.indexOf(element);
+    const length: number = cityArray.value.length;
+    let index: number = cityArray.value.indexOf(element);
     
     var newElementIndex: number = 0;
     if (element.parentElement.childNodes.length != 1) {
         element.classList.add('dragging')
-        function mouseup(e: MouseEvent) {
+        function mouseup(e: MouseEvent|TouchEvent) {            
             window.removeEventListener('mouseup', mouseup, false);
             window.removeEventListener('mousemove', mousemove, false);
+            window.removeEventListener('touchend', mouseup, false);
+            window.removeEventListener('touchmove', mousemove, false);
             element.classList.remove('dragging')
             cityArray.value.forEach((el: HTMLElement) => { el.style.transform = ""; el.style.transition = "0s" })
 
@@ -132,13 +136,13 @@ const drag = (event: MouseEvent): void => {
 
             setTimeout(() => { cityArray.value.forEach((el: HTMLElement) => { ; el.style.transition = "" }) }, 1)
         };
-        function mousemove(e: MouseEvent) {
+        function mousemove(e: MouseEvent|TouchEvent) {
             var elementHeight: number = (element.parentElement.offsetHeight / length);
             var parentHeight: number = element.parentElement.offsetHeight;
             var maxMove: number = parentHeight - (elementHeight * (index + 1));
             var minMove: number = (elementHeight * index) * -1;
-            moveY = between(e.pageY - dragStartY, minMove, maxMove);
-
+            moveY = between((e.pageY || e.changedTouches[e.changedTouches.length -1]?.pageY) - dragStartY, minMove, maxMove);
+            
             var elementOffsetIndex: number = Math.round(moveY / elementHeight);
             newElementIndex = between(Math.round(moveY / elementHeight) + index, 0, length - 1);
             cityArray.value[newElementIndex].style.transform = `translateY(${(between(elementOffsetIndex, -1, 1) * elementHeight) * -1}px)`
@@ -168,7 +172,9 @@ const drag = (event: MouseEvent): void => {
             element.style.transform = `translateY(${moveY}px)`;
         };
         window.addEventListener('mousemove', mousemove, false);
+        window.addEventListener('touchmove', mousemove, false);
         window.addEventListener('mouseup', mouseup, false);
+        window.addEventListener('touchend', mouseup, false);
     };
 };
 const openSettings = (elem: HTMLElement): void => {
